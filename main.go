@@ -12,10 +12,7 @@ import (
 )
 
 // Bot parameters
-var (
-	BotToken       = flag.String("token", "", "Bot access token")
-	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutdowning or not")
-)
+var BotToken = flag.String("token", "", "Bot access token")
 
 var s *discordgo.Session
 
