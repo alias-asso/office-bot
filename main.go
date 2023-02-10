@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -12,6 +14,10 @@ import (
 
 	"git.sr.ht/~adnano/go-gemini"
 	"github.com/bwmarrin/discordgo"
+)
+
+var (
+	ToggleRoleId string = "900797654563434549"
 )
 
 // Bot parameters
@@ -63,24 +69,53 @@ var (
 
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"local": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			status := localStatus()
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Status du local : " + "**" + status + "**",
-				},
-			})
+			status, err := localStatus()
+			if err != nil {
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Une erreur s'est produite",
+					},
+				})
+			} else {
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Status du local : " + "**" + status + "**",
+					},
+				})
+			}
 		},
 	}
 
 	textCommandHandlers = map[string]func(s *discordgo.Session, m *discordgo.MessageCreate){
 		"local": func(s *discordgo.Session, m *discordgo.MessageCreate) {
-			status := localStatus()
-			s.ChannelMessageSendReply(m.ChannelID, "Status du local : "+"**"+status+"**", m.Reference())
+			status, err := localStatus()
+			if err != nil {
+				s.ChannelMessageSendReply(m.ChannelID, "Une erreur s'est produite", m.Reference())
+			} else {
+				s.ChannelMessageSendReply(m.ChannelID, "Status du local : "+"**"+status+"**", m.Reference())
+			}
 		},
 		"local_toggle": func(s *discordgo.Session, m *discordgo.MessageCreate) {
-			resp := toggleStatus()
-			s.ChannelMessageSendReply(m.ChannelID, "Le status du local est maintenant : "+"**"+resp+"**", m.Reference())
+			fmt.Printf("%v", m.Member.Roles)
+			hasRole := false
+			for _, v := range m.Member.Roles {
+				if v == ToggleRoleId {
+					hasRole = true
+					break
+				}
+			}
+			if hasRole {
+				resp, err := toggleStatus()
+				if err != nil {
+					s.ChannelMessageSendReply(m.ChannelID, "Une erreur s'est produite", m.Reference())
+				} else {
+					s.ChannelMessageSendReply(m.ChannelID, "Le status du local est maintenant : "+"**"+resp+"**", m.Reference())
+				}
+			} else {
+				s.ChannelMessageSendReply(m.ChannelID, "Vous n'avez pas le rôle nécessaire pour cette commande.", m.Reference())
+			}
 		},
 	}
 )
@@ -103,13 +138,11 @@ func init() {
 	})
 }
 
-func localStatus() string {
+func localStatus() (string, error) {
 	resp, err := http.Get("https://status.alias-asso.fr/")
 
-	var status string
-
 	if err != nil {
-		status = "Erreur lors de l'obtention du status du local"
+		return "", errors.New("Erreur lors de l'obtention du status du local")
 	}
 
 	defer resp.Body.Close()
@@ -118,31 +151,34 @@ func localStatus() string {
 	body, _, err := reader.ReadLine()
 
 	if err != nil {
-		status = "Erreur lors de l'obtention du status du local"
+		return "", errors.New("Erreur lors de l'obtention du status du local")
 	}
 
-	status = string(body)
+	return string(body), nil
 
-	return status
 }
 
-func toggleStatus() string {
+func toggleStatus() (string, error) {
 	r, err := gemini.NewRequest("gemini://status.alias-asso.fr/toggle")
 	if err != nil {
-		return "Erreur lors de la création de la requête."
+		return "", errors.New("Erreur lors de la création de la requête.")
 	}
 	r.Certificate = &tls_cert
 	ctx := context.Background()
 	resp, err := g_client.Do(ctx, r)
 	if err != nil {
-		return "Erreur lors de la requête"
+		return "", errors.New("Erreur lors de la requête")
 	}
 	defer resp.Body.Close()
 	status := resp.Status.String()
 	if status != "Redirect" {
-		return "Erreur lors de la requête"
+		return "", errors.New("Erreur lors de la requête")
 	}
-	return localStatus()
+	localStatusString, err := localStatus()
+	if err != nil {
+		return "", err
+	}
+	return localStatusString, nil
 }
 
 func main() {
