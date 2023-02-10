@@ -6,11 +6,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 
 	"git.sr.ht/~adnano/go-gemini"
 	"github.com/bwmarrin/discordgo"
@@ -63,8 +63,8 @@ var (
 	}
 
 	textCommands = map[string]string{
-		"local":        "local.status()",
-		"local_toggle": "local.toggle()",
+		"local":        `^[lL]ocal\.[sS]tatus\(\)\;?$`,
+		"local_toggle": `^[lL]ocal\.[tT]oggle\(\)\;?$`,
 	}
 
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
@@ -98,7 +98,6 @@ var (
 			}
 		},
 		"local_toggle": func(s *discordgo.Session, m *discordgo.MessageCreate) {
-			fmt.Printf("%v", m.Member.Roles)
 			hasRole := false
 			for _, v := range m.Member.Roles {
 				if v == ToggleRoleId {
@@ -129,7 +128,8 @@ func init() {
 
 	s.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		for i, v := range textCommands {
-			if m.Content == v {
+			match, _ := regexp.Match(v, []byte(m.Content))
+			if match {
 				if command, ok := textCommandHandlers[i]; ok {
 					command(s, m)
 				}
