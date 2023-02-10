@@ -2,19 +2,30 @@ package main
 
 import (
 	"bufio"
+	"context"
+	"crypto/tls"
 	"flag"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 
+	"git.sr.ht/~adnano/go-gemini"
 	"github.com/bwmarrin/discordgo"
 )
 
 // Bot parameters
-var BotToken = flag.String("token", "", "Bot access token")
+var (
+	BotToken       = flag.String("token", "", "Bot access token")
+	CertPath       = flag.String("cert-path", "", "Certificate path")
+	PrivateKeyPath = flag.String("private-key-path", "", "Private key path")
+)
 
-var s *discordgo.Session
+var (
+	s        *discordgo.Session
+	tls_cert tls.Certificate
+	g_client gemini.Client
+)
 
 func init() { flag.Parse() }
 
@@ -24,6 +35,13 @@ func init() {
 	if err != nil {
 		log.Fatalf("Invalid bot parameters: %v", err)
 	}
+	if *CertPath != "" {
+		tls_cert, err = tls.LoadX509KeyPair(*CertPath, *PrivateKeyPath)
+		if err != nil {
+			log.Fatalf("Invalide certificate : %v", err)
+		}
+	}
+
 }
 
 var (
@@ -39,7 +57,8 @@ var (
 	}
 
 	textCommands = map[string]string{
-		"local": "local.status()",
+		"local":        "local.status()",
+		"local_toggle": "local.toggle()",
 	}
 
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
@@ -48,7 +67,7 @@ var (
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: status,
+					Content: "Status du local : " + "**" + status + "**",
 				},
 			})
 		},
@@ -57,7 +76,11 @@ var (
 	textCommandHandlers = map[string]func(s *discordgo.Session, m *discordgo.MessageCreate){
 		"local": func(s *discordgo.Session, m *discordgo.MessageCreate) {
 			status := localStatus()
-			s.ChannelMessageSendReply(m.ChannelID, status, m.Reference())
+			s.ChannelMessageSendReply(m.ChannelID, "Status du local : "+"**"+status+"**", m.Reference())
+		},
+		"local_toggle": func(s *discordgo.Session, m *discordgo.MessageCreate) {
+			resp := toggleStatus()
+			s.ChannelMessageSendReply(m.ChannelID, "Le status du local est maintenant : "+"**"+resp+"**", m.Reference())
 		},
 	}
 )
@@ -98,9 +121,28 @@ func localStatus() string {
 		status = "Erreur lors de l'obtention du status du local"
 	}
 
-	status = "Status du local : " + "**" + string(body) + "**"
+	status = string(body)
 
 	return status
+}
+
+func toggleStatus() string {
+	r, err := gemini.NewRequest("gemini://status.alias-asso.fr/toggle")
+	if err != nil {
+		return "Erreur lors de la création de la requête."
+	}
+	r.Certificate = &tls_cert
+	ctx := context.Background()
+	resp, err := g_client.Do(ctx, r)
+	if err != nil {
+		return "Erreur lors de la requête"
+	}
+	defer resp.Body.Close()
+	status := resp.Status.String()
+	if status != "Redirect" {
+		return "Erreur lors de la requête"
+	}
+	return localStatus()
 }
 
 func main() {
