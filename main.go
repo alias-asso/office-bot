@@ -58,7 +58,21 @@ var (
 	commands = []*discordgo.ApplicationCommand{
 		{
 			Name:        "local",
-			Description: "Obtenir le status du local",
+			Description: "Interractions avec le status du local",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "toggle",
+					Description: "Changer le status du local",
+					Required:    false,
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+				},
+				{
+					Name:        "status",
+					Description: "Obtenir le status du local",
+					Required:    false,
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+				},
+			},
 		},
 	}
 
@@ -69,22 +83,64 @@ var (
 
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"local": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			status, err := localStatus()
-			if err != nil {
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Une erreur s'est produite",
-					},
-				})
-			} else {
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Status du local : " + "**" + status + "**",
-					},
-				})
+			options := i.ApplicationCommandData().Options
+			switch options[0].Name {
+			case "status":
+				status, err := localStatus()
+				if err != nil {
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Flags:   discordgo.MessageFlagsEphemeral,
+							Content: "Une erreur s'est produite",
+						},
+					})
+				} else {
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "Status du local : " + "**" + status + "**",
+						},
+					})
+				}
+			case "toggle":
+				hasRole := false
+				for _, v := range i.Member.Roles {
+					if v == ToggleRoleId {
+						hasRole = true
+						break
+					}
+				}
+				if hasRole {
+					resp, err := toggleStatus()
+					if err != nil {
+						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Flags:   discordgo.MessageFlagsEphemeral,
+								Content: "Une erreur s'est produite",
+							},
+						})
+
+					} else {
+						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseChannelMessageWithSource,
+							Data: &discordgo.InteractionResponseData{
+								Content: "Le status du local est maintenant : " + "**" + resp + "**",
+							},
+						})
+					}
+				} else {
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Flags:   discordgo.MessageFlagsEphemeral,
+							Content: "Vous n'avez pas le rôle nécessaire pour cette commande.",
+						},
+					})
+				}
 			}
+
 		},
 	}
 
