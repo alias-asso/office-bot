@@ -44,7 +44,7 @@ func init() {
 	if *CertPath != "" {
 		tls_cert, err = tls.LoadX509KeyPair(*CertPath, *PrivateKeyPath)
 		if err != nil {
-			log.Fatalf("Invalide certificate : %v", err)
+			log.Fatalf("Invalid certificate: %v", err)
 		}
 	}
 
@@ -58,17 +58,17 @@ var (
 	commands = []*discordgo.ApplicationCommand{
 		{
 			Name:        "local",
-			Description: "Interractions avec le status du local",
+			Description: "Interactions avec le statut du local",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:        "toggle",
-					Description: "Changer le status du local",
+					Description: "Changer le statut du local",
 					Required:    false,
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 				},
 				{
 					Name:        "status",
-					Description: "Obtenir le status du local",
+					Description: "Obtenir le statut du local",
 					Required:    false,
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 				},
@@ -99,7 +99,7 @@ var (
 					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
-							Content: "Status du local : " + "**" + status + "**",
+							Content: "Statut du local: " + "**" + status + "**",
 						},
 					})
 				}
@@ -126,7 +126,7 @@ var (
 						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 							Type: discordgo.InteractionResponseChannelMessageWithSource,
 							Data: &discordgo.InteractionResponseData{
-								Content: "Le status du local est maintenant : " + "**" + resp + "**",
+								Content: "Le statut du local est maintenant: " + "**" + resp + "**",
 							},
 						})
 					}
@@ -135,7 +135,7 @@ var (
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Flags:   discordgo.MessageFlagsEphemeral,
-							Content: "Vous n'avez pas le rôle nécessaire pour cette commande.",
+							Content: "Vous n'avez pas le rôle nécessaire pour cette commande",
 						},
 					})
 				}
@@ -150,7 +150,7 @@ var (
 			if err != nil {
 				s.ChannelMessageSendReply(m.ChannelID, "Une erreur s'est produite", m.Reference())
 			} else {
-				s.ChannelMessageSendReply(m.ChannelID, "Status du local : "+"**"+status+"**", m.Reference())
+				s.ChannelMessageSendReply(m.ChannelID, "Statut du local: "+"**"+status+"**", m.Reference())
 			}
 		},
 		"local_toggle": func(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -166,10 +166,10 @@ var (
 				if err != nil {
 					s.ChannelMessageSendReply(m.ChannelID, "Une erreur s'est produite", m.Reference())
 				} else {
-					s.ChannelMessageSendReply(m.ChannelID, "Le status du local est maintenant : "+"**"+resp+"**", m.Reference())
+					s.ChannelMessageSendReply(m.ChannelID, "Le statut du local est maintenant: "+"**"+resp+"**", m.Reference())
 				}
 			} else {
-				s.ChannelMessageSendReply(m.ChannelID, "Vous n'avez pas le rôle nécessaire pour cette commande.", m.Reference())
+				s.ChannelMessageSendReply(m.ChannelID, "Vous n'avez pas le rôle nécessaire pour cette commande", m.Reference())
 			}
 		},
 	}
@@ -198,7 +198,7 @@ func localStatus() (string, error) {
 	resp, err := http.Get("https://status.alias-asso.fr/")
 
 	if err != nil {
-		return "", errors.New("Erreur lors de l'obtention du status du local")
+		return "", errors.New("Erreur lors de l'obtention du statut du local: la requête a échoué")
 	}
 
 	defer resp.Body.Close()
@@ -207,7 +207,7 @@ func localStatus() (string, error) {
 	body, _, err := reader.ReadLine()
 
 	if err != nil {
-		return "", errors.New("Erreur lors de l'obtention du status du local")
+		return "", errors.New("Erreur lors de l'obtention du statut du local: impossible de lire la réponse à la requête")
 	}
 
 	return string(body), nil
@@ -217,18 +217,18 @@ func localStatus() (string, error) {
 func toggleStatus() (string, error) {
 	r, err := gemini.NewRequest("gemini://status.alias-asso.fr/toggle")
 	if err != nil {
-		return "", errors.New("Erreur lors de la création de la requête.")
+		return "", errors.New("Erreur lors de la création de la requête Gemini")
 	}
 	r.Certificate = &tls_cert
 	ctx := context.Background()
 	resp, err := g_client.Do(ctx, r)
 	if err != nil {
-		return "", errors.New("Erreur lors de la requête")
+		return "", errors.New("Erreur lors de la requête Gemini")
 	}
 	defer resp.Body.Close()
 	status := resp.Status.String()
 	if status != "Redirect" {
-		return "", errors.New("Erreur lors de la requête")
+		return "", errors.New("Erreur lors de la requête Gemini: code de retour inattendue")
 	}
 	localStatusString, err := localStatus()
 	if err != nil {
@@ -244,7 +244,7 @@ func main() {
 
 	err := s.Open()
 	if err != nil {
-		log.Fatalf("Cannot open the session: %v", err)
+		log.Fatalf("Cannot open Discord session: %v", err)
 	}
 
 	log.Println("Adding commands...")
@@ -272,5 +272,5 @@ func main() {
 		}
 	}
 
-	log.Println("Gracefully shutting down.")
+	log.Println("Gracefully shutting down")
 }
