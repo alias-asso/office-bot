@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	ToggleRoleId string = "691999377639866388"
+	ToggleRoleId string = "1042488433899217016"
 )
 
 // Bot parameters
