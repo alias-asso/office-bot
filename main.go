@@ -16,9 +16,10 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var (
-	ToggleRoleId string = "1042488433899217016"
-)
+var ToggleRolesId = [2]string{
+	"1042488433899217016", // team
+	"691999377639866388",  // CA
+}
 
 // Bot parameters
 var (
@@ -27,6 +28,7 @@ var (
 	PrivateKeyPath = flag.String("private-key-path", "", "Private key path")
 )
 
+// Clients initialization
 var (
 	s        *discordgo.Session
 	tls_cert tls.Certificate
@@ -55,6 +57,7 @@ var (
 	dmPermission                   = false
 	defaultMemberPermissions int64 = discordgo.PermissionManageServer
 
+	// Slash commands definition
 	commands = []*discordgo.ApplicationCommand{
 		{
 			Name:        "local",
@@ -76,11 +79,13 @@ var (
 		},
 	}
 
+	// Text commands definitions
 	textCommands = map[string]string{
 		"local":        `^[lL]ocal\.[sS]tatus\(\)\;?$`,
 		"local_toggle": `^[lL]ocal\.[tT]oggle\(\)\;?$`,
 	}
 
+	// Slash commands handlers
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"local": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			options := i.ApplicationCommandData().Options
@@ -106,9 +111,11 @@ var (
 			case "toggle":
 				hasRole := false
 				for _, v := range i.Member.Roles {
-					if v == ToggleRoleId {
-						hasRole = true
-						break
+					for _, role := range ToggleRolesId {
+						if v == role {
+							hasRole = true
+							break
+						}
 					}
 				}
 				if hasRole {
@@ -144,6 +151,7 @@ var (
 		},
 	}
 
+	// Text command handler
 	textCommandHandlers = map[string]func(s *discordgo.Session, m *discordgo.MessageCreate){
 		"local": func(s *discordgo.Session, m *discordgo.MessageCreate) {
 			status, err := localStatus()
@@ -156,9 +164,11 @@ var (
 		"local_toggle": func(s *discordgo.Session, m *discordgo.MessageCreate) {
 			hasRole := false
 			for _, v := range m.Member.Roles {
-				if v == ToggleRoleId {
-					hasRole = true
-					break
+				for _, role := range ToggleRolesId {
+					if v == role {
+						hasRole = true
+						break
+					}
 				}
 			}
 			if hasRole {
@@ -175,6 +185,7 @@ var (
 	}
 )
 
+// Add handlers
 func init() {
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
