@@ -1,3 +1,5 @@
 ./invite-link.txt
 ./alias-local-bot
 ./*.pem
+./*.key
+./config.toml

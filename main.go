@@ -7,13 +7,13 @@ import (
 	"errors"
 	"flag"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
-	"regexp"
+	"strings"
 
 	"git.sr.ht/~adnano/go-gemini"
 	"github.com/bwmarrin/discordgo"
+	"github.com/pelletier/go-toml/v2"
 )
 
 var ToggleRolesId = [2]string{
@@ -21,11 +21,15 @@ var ToggleRolesId = [2]string{
 	"691999377639866388",  // CA
 }
 
+type Config struct {
+	BotToken       string `toml:"bot-token"`
+	CertPath       string `toml:"cert-path"`
+	PrivateKeyPath string `toml:"private-key-path"`
+}
+
 // Bot parameters
 var (
-	BotToken       = flag.String("token", "", "Bot access token")
-	CertPath       = flag.String("cert-path", "", "Certificate path")
-	PrivateKeyPath = flag.String("private-key-path", "", "Private key path")
+	ConfigFile = flag.String("config", "/etc/office-bot/config.toml", "Specify custom config file location")
 )
 
 // Clients initialization
@@ -38,13 +42,23 @@ var (
 func init() { flag.Parse() }
 
 func init() {
-	var err error
-	s, err = discordgo.New("Bot " + *BotToken)
+	configFileContent, err := os.ReadFile(*ConfigFile)
+	if err != nil {
+		log.Fatalf("Config file not found.")
+	}
+
+	var config Config
+	err = toml.Unmarshal(configFileContent, &config)
+	if err != nil {
+		log.Fatalf("Error parsing the config file : %s", err)
+	}
+
+	s, err = discordgo.New("Bot " + config.BotToken)
 	if err != nil {
 		log.Fatalf("Invalid bot parameters: %v", err)
 	}
-	if *CertPath != "" {
-		tls_cert, err = tls.LoadX509KeyPair(*CertPath, *PrivateKeyPath)
+	if config.CertPath != "" {
+		tls_cert, err = tls.LoadX509KeyPair(config.CertPath, config.PrivateKeyPath)
 		if err != nil {
 			log.Fatalf("Invalid certificate: %v", err)
 		}
@@ -77,12 +91,6 @@ var (
 				},
 			},
 		},
-	}
-
-	// Text commands definitions
-	textCommands = map[string]string{
-		"local":        `^[lL]ocal\.[sS]tatus\(\)\;?$`,
-		"local_toggle": `^[lL]ocal\.[tT]oggle\(\)\;?$`,
 	}
 
 	// Slash commands handlers
@@ -150,39 +158,6 @@ var (
 
 		},
 	}
-
-	// Text command handler
-	textCommandHandlers = map[string]func(s *discordgo.Session, m *discordgo.MessageCreate){
-		"local": func(s *discordgo.Session, m *discordgo.MessageCreate) {
-			status, err := localStatus()
-			if err != nil {
-				s.ChannelMessageSendReply(m.ChannelID, "Une erreur s'est produite", m.Reference())
-			} else {
-				s.ChannelMessageSendReply(m.ChannelID, "Statut du local: "+"**"+status+"**", m.Reference())
-			}
-		},
-		"local_toggle": func(s *discordgo.Session, m *discordgo.MessageCreate) {
-			hasRole := false
-			for _, v := range m.Member.Roles {
-				for _, role := range ToggleRolesId {
-					if v == role {
-						hasRole = true
-						break
-					}
-				}
-			}
-			if hasRole {
-				resp, err := toggleStatus()
-				if err != nil {
-					s.ChannelMessageSendReply(m.ChannelID, "Une erreur s'est produite", m.Reference())
-				} else {
-					s.ChannelMessageSendReply(m.ChannelID, "Le statut du local est maintenant: "+"**"+resp+"**", m.Reference())
-				}
-			} else {
-				s.ChannelMessageSendReply(m.ChannelID, "Vous n'avez pas le rôle nécessaire pour cette commande", m.Reference())
-			}
-		},
-	}
 )
 
 // Add handlers
@@ -192,22 +167,10 @@ func init() {
 			h(s, i)
 		}
 	})
-
-	s.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		for i, v := range textCommands {
-			match, _ := regexp.Match(v, []byte(m.Content))
-			if match {
-				if command, ok := textCommandHandlers[i]; ok {
-					command(s, m)
-				}
-			}
-		}
-	})
 }
 
 func localStatus() (string, error) {
-	resp, err := http.Get("https://status.alias-asso.fr/")
-
+	resp, err := g_client.Get(context.Background(), "gemini://status.alias-asso.fr/")
 	if err != nil {
 		return "", errors.New("Erreur lors de l'obtention du statut du local: la requête a échoué")
 	}
@@ -215,13 +178,18 @@ func localStatus() (string, error) {
 	defer resp.Body.Close()
 	reader := bufio.NewReader(resp.Body)
 
-	body, _, err := reader.ReadLine()
+	//Read lines while it starts with #
+	line, _, err := reader.ReadLine()
+	for line[0] == '#' {
+		line, _, err = reader.ReadLine()
+	}
+	status := strings.Split(string(line), " ")[4]
 
 	if err != nil {
 		return "", errors.New("Erreur lors de l'obtention du statut du local: impossible de lire la réponse à la requête")
 	}
 
-	return string(body), nil
+	return status, nil
 
 }
 
