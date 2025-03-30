@@ -15,6 +15,8 @@ type Config struct {
 	BotToken       string   `toml:"bot-token"`
 	StatusFilePath string   `toml:"status-file-path"`
 	ServerPort     string   `toml:"server-port"`
+	UsernameHash   string   `toml:"username-hash"`
+	PasswordHash   string   `toml:"password-hash"`
 	ToggleRoles    []string `toml:"toggle-roles"`
 }
 
