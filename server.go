@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"net/http"
+
 )
 
 var mux *http.ServeMux
@@ -55,5 +57,7 @@ func handleToggle(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		fmt.Fprint(w, "error")
 	}
+	webhookJson := []byte("{\"content\": \"**[WEB] ** Le local vient est maintenant **" + newStatus + "**\"}")
+	http.Post("https://discord.com/api/webhooks/"+config.WebhookId+"/"+config.WebhookToken, "application/json", bytes.NewBuffer(webhookJson))
 	fmt.Fprint(w, "new status: "+newStatus)
 }

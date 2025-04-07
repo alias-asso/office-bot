@@ -16,6 +16,8 @@ type Config struct {
 	StatusFilePath string   `toml:"status-file-path"`
 	ServerPort     string   `toml:"server-port"`
 	PasswordHash   string   `toml:"password-hash"`
+	WebhookId      string   `toml:"webhook-id"`
+	WebhookToken   string   `toml:"webhook-token"`
 	ToggleRoles    []string `toml:"toggle-roles"`
 }
 
