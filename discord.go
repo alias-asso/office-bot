@@ -65,7 +65,7 @@ var (
 					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
-							Content: "Statut du local: " + "**" + status + "**",
+							Content: "Statut du local : " + "**" + status + "**",
 						},
 					})
 				}
@@ -94,7 +94,7 @@ var (
 						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 							Type: discordgo.InteractionResponseChannelMessageWithSource,
 							Data: &discordgo.InteractionResponseData{
-								Content: "Le statut du local est maintenant: " + "**" + status + "**",
+								Content: "Le statut du local est maintenant : " + "**" + status + "**",
 							},
 						})
 					}
