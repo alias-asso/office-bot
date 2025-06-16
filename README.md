@@ -18,4 +18,4 @@ private-key-path = ""
 
 If you want to use a different path, you can specify it with the `-config` flag.
 
-**This is currently a work in progress!** Contributions are welcome in any case to the [mailing list](https://lists.sr.ht/~alias/services) after discussion on the [discussion list](https://lists.sr.ht/~alias/services-discuss) or [our Discord server](https://discord.gg/Qq6u8Mz)
+**This is currently a work in progress!** Contributions are welcome in any case after discussion on [our Discord server](https://discord.gg/Qq6u8Mz)
