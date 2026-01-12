@@ -72,5 +72,5 @@ func handleToggle(w http.ResponseWriter, req *http.Request) {
 	}
 	webhookJson := []byte("{\"content\": \"**[WEB]** Le statut du local est maintenant : **" + newStatus + "**\"}")
 	http.Post("https://discord.com/api/webhooks/"+config.WebhookId+"/"+config.WebhookToken, "application/json", bytes.NewBuffer(webhookJson))
-	fmt.Fprint(w, "nouveau statut : "+newStatus)
+	http.Redirect(w, req, "/", http.StatusPermanentRedirect)
 }
