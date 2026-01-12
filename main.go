@@ -12,13 +12,14 @@ import (
 )
 
 type Config struct {
-	BotToken       string   `toml:"bot-token"`
-	StatusFilePath string   `toml:"status-file-path"`
-	ServerPort     string   `toml:"server-port"`
-	PasswordHash   string   `toml:"password-hash"`
-	WebhookId      string   `toml:"webhook-id"`
-	WebhookToken   string   `toml:"webhook-token"`
-	ToggleRoles    []string `toml:"toggle-roles"`
+	BotToken              string   `toml:"bot-token"`
+	StatusFilePath        string   `toml:"status-file-path"`
+	ServerPort            string   `toml:"server-port"`
+	PasswordHash          string   `toml:"password-hash"`
+	WebhookId             string   `toml:"webhook-id"`
+	WebhookToken          string   `toml:"webhook-token"`
+	ToggleRoles           []string `toml:"toggle-roles"`
+	BlacklistedUserAgents []string `toml:"blacklisted-ua"`
 }
 
 var (

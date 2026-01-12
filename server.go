@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
-
+	"strings"
 )
 
 var mux *http.ServeMux
@@ -34,14 +34,27 @@ func urlAuth(next http.HandlerFunc) http.HandlerFunc {
 			passwordMatch := (subtle.ConstantTimeCompare([]byte(passwordHashHex), expectedPasswordHash[:]) == 1)
 
 			if passwordMatch {
-				next.ServeHTTP(w, r)
-				return
+				if checkUserAgentBlacklist(r.UserAgent()) {
+					next.ServeHTTP(w, r)
+					return
+				}
 			}
 		}
 
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	})
 
+}
+
+func checkUserAgentBlacklist(userAgent string) bool {
+	lowerUa := strings.ToLower(userAgent)
+	for _, term := range config.BlacklistedUserAgents {
+		lowerTerm := strings.ToLower(term)
+		if strings.Contains(lowerUa, lowerTerm) {
+			return false
+		}
+	}
+	return true
 }
 
 func handleStatus(w http.ResponseWriter, req *http.Request) {
