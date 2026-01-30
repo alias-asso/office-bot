@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -73,5 +74,6 @@ func handleToggle(w http.ResponseWriter, req *http.Request) {
 	webhookJson := []byte("{\"content\": \"**[WEB]** Le statut du local est maintenant : **" + newStatus + "**\"}")
 	http.Post("https://discord.com/api/webhooks/"+config.WebhookId+"/"+config.WebhookToken, "application/json", bytes.NewBuffer(webhookJson))
 	w.Header().Set("Cache-Control", "no-store")
+	log.Printf("Local toggled by user agent : %s", req.UserAgent())
 	http.Redirect(w, req, "/", http.StatusPermanentRedirect)
 }
