@@ -79,7 +79,7 @@ func main() {
 	signal.Notify(stop, os.Interrupt)
 
 	server := &http.Server{
-		Addr:    ":" + config.ServerPort,
+		Addr:    "localhost:" + config.ServerPort,
 		Handler: mux,
 	}
 	log.Println("Server started on port " + config.ServerPort + " press Ctrl+C to exit")
