@@ -67,11 +67,11 @@ func handleStatus(w http.ResponseWriter, req *http.Request) {
 }
 
 func handleToggle(w http.ResponseWriter, req *http.Request) {
-	newStatus, err := ToggleStatus()
+	err := SetStatus(false)
 	if err != nil {
 		fmt.Fprint(w, "error")
 	}
-	webhookJson := []byte("{\"content\": \"**[WEB]** Le statut du local est maintenant : **" + newStatus + "**\"}")
+	webhookJson := []byte("{\"content\": \"**[WEB]** Le statut du local est maintenant : **fermé**\"}")
 	http.Post("https://discord.com/api/webhooks/"+config.WebhookId+"/"+config.WebhookToken, "application/json", bytes.NewBuffer(webhookJson))
 	w.Header().Set("Cache-Control", "no-store")
 	log.Printf("Local toggled by user agent : %s", req.UserAgent())
